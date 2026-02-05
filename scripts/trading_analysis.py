@@ -345,9 +345,9 @@ def generate_strategy_recommendations():
     recommendations = """
 Based on the analysis, here are 2 evidence-based strategy recommendations:
 
-═══════════════════════════════════════════════════════════════════════════════
+══════════════════════════════════════════════════════════════════════════════════════
 STRATEGY 1: SENTIMENT-ADJUSTED POSITION SIZING
-═══════════════════════════════════════════════════════════════════════════════
+══════════════════════════════════════════════════════════════════════════════════════
 
 RECOMMENDATION:
 • During FEAR days: Reduce position sizes by 20-30% for high-leverage traders
@@ -370,9 +370,9 @@ EXPECTED IMPACT:
 - Increase PnL capture by ~12% on Greed days
 - Improve risk-adjusted returns (Sharpe ratio improvement ~0.2)
 
-═══════════════════════════════════════════════════════════════════════════════
+════════════════════════════════════════════════════════════════════════════════════════
 STRATEGY 2: SENTIMENT-BASED TRADE FREQUENCY OPTIMIZATION
-═══════════════════════════════════════════════════════════════════════════════
+══════════════════════════════════════════════════════════════════════════════════════
 
 RECOMMENDATION:
 • During FEAR days: Increase trade frequency for frequent traders
@@ -404,7 +404,7 @@ EXPECTED IMPACT:
 - Overtrading reduction: -25% on Greed days
 - Overall PnL improvement: +10-15%
 
-═══════════════════════════════════════════════════════════════════════════════
+════════════════════════════════════════════════════════════════════════════════════════
 """
     print(recommendations)
     return recommendations
@@ -495,8 +495,6 @@ def create_visualizations(analysis_df, trades_df, account_metrics,
     ax3.set_title('Sentiment Index vs Daily PnL')
     ax3.set_xlabel('Fear & Greed Index Value')
     ax3.set_ylabel('Daily PnL ($)')
-    ax3.axhline(y=0, color='black', linestyle='--', alpha=0.5)
-    ax3.axvline(x=45, color='gray', linestyle='--', alpha=0.5)
     
     plt.tight_layout()
     plt.savefig(f'{CHARTS_DIR}fear_vs_greed_comparison.png', dpi=150, bbox_inches='tight')
@@ -507,56 +505,31 @@ def create_visualizations(analysis_df, trades_df, account_metrics,
     fig, axes = plt.subplots(1, 3, figsize=(15, 5))
     fig.suptitle('Trader Segmentation Analysis', fontsize=14, fontweight='bold')
     
-    # Prepare data
-    high_lev = account_metrics[account_metrics['avg_position_size'] >= account_metrics['avg_position_size'].median()]
-    low_lev = account_metrics[account_metrics['avg_position_size'] < account_metrics['avg_position_size'].median()]
-    high_freq = account_metrics[account_metrics['trade_count'] >= account_metrics['trade_count'].median()]
-    low_freq = account_metrics[account_metrics['trade_count'] < account_metrics['trade_count'].median()]
-    
-    # 3.1 Position Size Segments
+    # 3.1 Position Size vs PnL
     ax1 = axes[0]
-    x = np.arange(2)
-    width = 0.35
-    ax1.bar(x - width/2, [high_lev['total_pnl'].mean(), high_lev['win_rate'].mean()*100], 
-            width, label='High Position Size', color='#1f77b4')
-    ax1.bar(x + width/2, [low_lev['total_pnl'].mean(), low_lev['win_rate'].mean()*100], 
-            width, label='Low Position Size', color='#ff7f0e')
-    ax1.set_ylabel('Value')
-    ax1.set_title('Performance by Position Size')
-    ax1.set_xticks(x)
-    ax1.set_xticklabels(['Avg PnL ($)', 'Win Rate (%)'])
-    ax1.legend()
+    ax1.scatter(account_metrics['avg_position_size'], account_metrics['total_pnl'], 
+               alpha=0.6, c=account_metrics['win_rate'], cmap='RdYlGn')
+    ax1.set_title('Position Size vs Total PnL')
+    ax1.set_xlabel('Average Position Size ($)')
+    ax1.set_ylabel('Total PnL ($)')
     
-    # 3.2 Frequency Segments
+    # 3.2 Trade Count vs PnL
     ax2 = axes[1]
-    ax2.bar(x - width/2, [high_freq['total_pnl'].mean(), high_freq['win_rate'].mean()*100], 
-            width, label='Frequent Traders', color='#2ca02c')
-    ax2.bar(x + width/2, [low_freq['total_pnl'].mean(), low_freq['win_rate'].mean()*100], 
-            width, label='Infrequent Traders', color='#d62728')
-    ax2.set_ylabel('Value')
-    ax2.set_title('Performance by Trade Frequency')
-    ax2.set_xticks(x)
-    ax2.set_xticklabels(['Avg PnL ($)', 'Win Rate (%)'])
-    ax2.legend()
+    ax2.scatter(account_metrics['trade_count'], account_metrics['total_pnl'], 
+               alpha=0.6, c=account_metrics['win_rate'], cmap='RdYlGn')
+    ax2.set_title('Trade Frequency vs Total PnL')
+    ax2.set_xlabel('Total Trades')
+    ax2.set_ylabel('Total PnL ($)')
     
-    # 3.3 Consistency Segments
+    # 3.3 Win Rate Distribution by Segment
     ax3 = axes[2]
-    consistent_winners = account_metrics[(account_metrics['cv'] < account_metrics['cv'].median()) & 
-                                          (account_metrics['total_pnl'] > 0)]
-    inconsistent = account_metrics[account_metrics['cv'] >= account_metrics['cv'].median()]
-    
-    x3 = np.arange(2)
-    ax3.bar(x3 - width/2, [consistent_winners['total_pnl'].mean(), 
-                            consistent_winners['win_rate'].mean()*100], 
-            width, label='Consistent Winners', color='#1f77b4')
-    ax3.bar(x3 + width/2, [inconsistent['total_pnl'].mean(), 
-                            inconsistent['win_rate'].mean()*100], 
-            width, label='Inconsistent', color='#ff7f0e', alpha=0.7)
-    ax3.set_ylabel('Value')
-    ax3.set_title('Performance by Consistency')
-    ax3.set_xticks(x3)
-    ax3.set_xticklabels(['Avg PnL ($)', 'Win Rate (%)'])
-    ax3.legend()
+    segments = ['High Position', 'Low Position', 'Frequent', 'Infrequent']
+    win_rates = [high_lev['win_rate'].mean()*100, low_lev['win_rate'].mean()*100,
+                 high_freq['win_rate'].mean()*100, low_freq['win_rate'].mean()*100]
+    ax3.bar(segments, win_rates, color=['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728'])
+    ax3.set_title('Win Rate by Trader Segment')
+    ax3.set_ylabel('Average Win Rate (%)')
+    ax3.tick_params(axis='x', rotation=45)
     
     plt.tight_layout()
     plt.savefig(f'{CHARTS_DIR}trader_segments.png', dpi=150, bbox_inches='tight')
@@ -565,122 +538,93 @@ def create_visualizations(analysis_df, trades_df, account_metrics,
     
     # Figure 4: Correlation Heatmap
     fig, ax = plt.subplots(figsize=(10, 8))
-    correlation_cols = ['value', 'total_pnl', 'win_rate', 'trade_count', 
-                        'avg_trade_size', 'unique_traders']
-    corr_matrix = analysis_df[correlation_cols].corr()
-    sns.heatmap(corr_matrix, annot=True, cmap='RdYlGn', center=0, fmt='.2f', ax=ax)
-    ax.set_title('Correlation Matrix: Sentiment & Trading Metrics', 
-                 fontsize=12, fontweight='bold')
+    numeric_cols = analysis_df[['total_pnl', 'win_rate', 'trade_count', 'avg_trade_size', 'value']].corr()
+    sns.heatmap(numeric_cols, annot=True, cmap='RdYlGn', center=0, ax=ax)
+    ax.set_title('Correlation Matrix: Performance Metrics')
     plt.tight_layout()
     plt.savefig(f'{CHARTS_DIR}correlation_heatmap.png', dpi=150, bbox_inches='tight')
     plt.close()
     print(f" Saved: {CHARTS_DIR}correlation_heatmap.png")
     
-    print("\n All visualizations complete!")
-
-def save_summary_statistics(analysis_df, trades_df, fear_days, greed_days,
-                           high_lev, low_lev, high_freq, low_freq,
-                           consistent_winners, consistent_losers, inconsistent):
-    """Save summary statistics"""
-    
-    summary_table = pd.DataFrame({
-        'Metric': [
-            'Total Trading Days',
-            'Total Trades Analyzed',
-            'Unique Traders',
-            'Total Volume (USD)',
-            'Total PnL (USD)',
-            'Overall Win Rate (%)',
-            'Average Trade Size (USD)',
-            'Fear Days Count',
-            'Greed Days Count',
-            'Fear Days Avg PnL ($)',
-            'Greed Days Avg PnL ($)',
-            'Fear Days Win Rate (%)',
-            'Greed Days Win Rate (%)',
-            'High Position Size Traders',
-            'Low Position Size Traders',
-            'Frequent Traders',
-            'Infrequent Traders',
-            'Consistent Winners',
-            'Consistent Losers',
-            'Inconsistent Traders'
-        ],
-        'Value': [
-            len(analysis_df),
-            len(trades_df),
-            trades_df['Account'].nunique(),
-            f"${trades_df['Size USD'].sum():,.0f}",
-            f"${trades_df['Closed PnL'].sum():,.0f}",
-            f"{trades_df['is_win'].mean()*100:.1f}",
-            f"${trades_df['Size USD'].mean():,.0f}",
-            len(fear_days),
-            len(greed_days),
-            f"${fear_days['total_pnl'].mean():,.0f}",
-            f"${greed_days['total_pnl'].mean():,.0f}",
-            f"{fear_days['win_rate'].mean():.1f}",
-            f"{greed_days['win_rate'].mean():.1f}",
-            len(high_lev),
-            len(low_lev),
-            len(high_freq),
-            len(low_freq),
-            len(consistent_winners),
-            len(consistent_losers),
-            len(inconsistent)
-        ]
-    })
-    
-    summary_table.to_csv(f'{DATA_DIR}summary_statistics.csv', index=False)
-    print(f" Saved: {DATA_DIR}summary_statistics.csv")
-    
-    return summary_table
+    print("\n All visualizations saved successfully!")
 
 def main():
     """Main execution function"""
     print("\n" + "=" * 80)
     print("TRADING PERFORMANCE & SENTIMENT ANALYSIS")
     print("=" * 80)
+    print(f"Start Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     
-    # Part A: Data Preparation
+    # Step 1: Load Data
     fg_df, trades_df = load_and_document_data()
-    fg_df, trades_df = convert_timestamps_and_align(fg_df, trades_df)
-    fg_df = create_sentiment_categories(fg_df)
-    analysis_df, trades_df = create_key_metrics(fg_df, trades_df)
     
-    # Part B: Analysis
+    # Step 2: Convert timestamps and align
+    fg_aligned, trades_aligned = convert_timestamps_and_align(fg_df, trades_df)
+    
+    # Step 3: Create sentiment categories
+    fg_aligned = create_sentiment_categories(fg_aligned)
+    
+    # Step 4: Create key metrics
+    analysis_df, trades_df = create_key_metrics(fg_aligned, trades_aligned)
+    
+    # Step 5: Analyze Fear vs Greed
     fear_days, greed_days = analyze_fear_vs_greed(analysis_df)
+    
+    # Step 6: Analyze Trader Behavior
     behavior_by_sentiment = analyze_trader_behavior(analysis_df, trades_df)
-    (account_metrics, high_lev, low_lev, high_freq, low_freq, 
-     consistent_winners, consistent_losers, inconsistent) = segment_traders(trades_df, analysis_df)
     
-    # Part C: Actionable Output
-    generate_strategy_recommendations()
+    # Step 7: Segment Traders
+    account_metrics, high_lev, low_lev, high_freq, low_freq, consistent_winners, consistent_losers, inconsistent = segment_traders(trades_df, analysis_df)
     
-    # Visualizations
-    create_visualizations(analysis_df, trades_df, account_metrics, 
-                         fear_days, greed_days)
+    # Step 8: Generate Recommendations
+    recommendations = generate_strategy_recommendations()
     
-    # Save summary
-    summary_table = save_summary_statistics(
-        analysis_df, trades_df, fear_days, greed_days,
-        high_lev, low_lev, high_freq, low_freq,
-        consistent_winners, consistent_losers, inconsistent
-    )
+    # Step 9: Create Visualizations
+    create_visualizations(analysis_df, trades_df, account_metrics, fear_days, greed_days)
+    
+    # Summary Statistics
+    print("\n" + "=" * 80)
+    print("SUMMARY STATISTICS")
+    print("=" * 80)
+    
+    summary_stats = {
+        'Total Trades Analyzed': len(trades_df),
+        'Unique Traders': trades_df['Account'].nunique(),
+        'Total Trading Days': len(analysis_df),
+        'Average Daily PnL': analysis_df['total_pnl'].mean(),
+        'Overall Win Rate': (trades_df['Closed PnL'] > 0).mean() * 100,
+        'Fear Days Avg PnL': fear_days['total_pnl'].mean(),
+        'Greed Days Avg PnL': greed_days['total_pnl'].mean(),
+        'PnL Difference': fear_days['total_pnl'].mean() - greed_days['total_pnl'].mean()
+    }
+    
+    for key, value in summary_stats.items():
+        if 'PnL' in key and 'Avg' in key:
+            print(f"{key}: ${value:,.2f}")
+        elif 'Win Rate' in key:
+            print(f"{key}: {value:.2f}%")
+        elif 'Trades' in key or 'Days' in key or 'Traders' in key:
+            print(f"{key}: {value:,}")
+        else:
+            print(f"{key}: ${value:,.2f}")
+    
+    # Save Summary Statistics
+    summary_df = pd.DataFrame([summary_stats])
+    summary_df.to_csv(f'{DATA_DIR}summary_statistics.csv', index=False)
     
     print("\n" + "=" * 80)
     print("ANALYSIS COMPLETE")
     print("=" * 80)
-    print("\nOutput files generated:")
-    print(f"   {DATA_DIR}daily_analysis.csv")
-    print(f"  {DATA_DIR}fear_greed_aligned.csv")
-    print(f"  {DATA_DIR}trader_segments.csv")
-    print(f"  {DATA_DIR}summary_statistics.csv")
-    print(f"  {CHARTS_DIR}performance_by_sentiment.png")
-    print(f"  {CHARTS_DIR}fear_vs_greed_comparison.png")
-    print(f"  {CHARTS_DIR}trader_segments.png")
-    print(f"  {CHARTS_DIR}correlation_heatmap.png")
-    
-    return analysis_df, trades_df, account_metrics
+    print(f"End Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"\nOutput Files:")
+    print(f"  - {DATA_DIR}daily_analysis.csv")
+    print(f"  - {DATA_DIR}fear_greed_aligned.csv")
+    print(f"  - {DATA_DIR}trader_segments.csv")
+    print(f"  - {DATA_DIR}summary_statistics.csv")
+    print(f"  - {CHARTS_DIR}performance_by_sentiment.png")
+    print(f"  - {CHARTS_DIR}fear_vs_greed_comparison.png")
+    print(f"  - {CHARTS_DIR}trader_segments.png")
+    print(f"  - {CHARTS_DIR}correlation_heatmap.png")
 
 if __name__ == "__main__":
-    analysis_df, trades_df, account_metrics = main()
+    main()
