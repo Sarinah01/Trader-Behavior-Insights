@@ -32,7 +32,7 @@ ENV/
 # Generated data files
 data/*.csv
 !data/.gitkeep
-charts/*.png
+# charts/*.png  <- charts are project output, keep them tracked
 !charts/.gitkeep
 
 # IDE
